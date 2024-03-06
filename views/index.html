@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: gray;
+        }
+
+        .container {
+            max-width: 1140px;
+            margin: auto;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .justify-content {
+            justify-content: space-between;
+        }
+
+        .align-item {
+            align-items: center;
+        }
+
+        .app {
+            background-color: rgb(177, 177, 177);
+            height: 920px;
+        }
+
+        .app .screen h2 {
+            text-align: center;
+            font-size: 40px;
+            padding: 50px;
+        }
+        .app .username-box{
+            width: 80%;
+            margin: auto;
+            display: flex;
+            justify-content: space-between;
+        }
+        .app .screen .from-input {
+            padding: 10px;
+        }
+
+        .app .screen .from-input label {
+            font-size: 30px;
+            padding:  0 30px;
+        }
+
+        .app .screen .from-input input {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+            width: 550px;
+            outline: none;
+        }
+
+        .app .screen .from-input button {
+            background-color: darkslateblue;
+            color: white;
+            padding: 10px 30px;
+            font-size: 20px;
+            border: none;
+        }
+
+        .chat-screen .header {
+            padding: 20px;
+            width: 80%;
+            margin: auto;
+            display: flex;
+            justify-content: end;
+        }
+
+        .chat-screen .header .logo {
+            font-size: 30px;
+            padding-right: 30px;
+        }
+
+        .chat-screen .header button {
+            background-color: darkslateblue;
+            color: white;
+            padding: 10px 30px;
+            font-size: 20px;
+            border: none;
+        }
+        .messages{
+            height: 500px;
+            width: 80%;
+            margin: auto;
+            overflow: scroll;
+        }
+        .messages .my-message {
+            display: flex;
+            justify-content: flex-end;
+            padding-right: 50px;
+        }
+
+        .messages .my-message .name {
+            color: rgb(128, 48, 214);
+            font-weight: 600;
+            padding: 5px;
+        }
+
+        .messages .my-message .text {
+            padding: 10px;
+            background-color: white;
+            border-radius: 25px;
+        }
+
+        .messages .other-message {
+            display: flex;
+            justify-content: flex-start;
+            padding-left: 50px;
+            margin-bottom: 10px;
+        }
+
+        .messages .other-message .name {
+            color: rgb(46, 36, 239);
+            font-weight: 600;
+            padding: 5px;
+        }
+
+        .messages .other-message .text {
+            padding: 10px;
+            background-color: white;
+            border-radius: 25px;
+        }
+
+        .messages .update {
+            text-align: center;
+            padding: 10px 0;
+            font-size: 20px;
+        }
+
+        .typebox{
+            width: 80%;
+            margin: auto;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .typebox input {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+            width: 750px;
+            outline: none;
+        }
+
+        .typebox button {
+            background-color: darkslateblue;
+            color: white;
+            padding: 10px 30px;
+            font-size: 20px;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="app">
+            <div class="screen join-screen active">
+                <form>
+                    <h2>Join Chatroom</h2>
+                    <div class="username-box row">
+                        <div class="from-input row">
+                            <label>Username : </label><br><br>
+                            <input type="text" id="username">
+                        </div>
+                        <div class="from-input">
+                            <button id="join-user">Join</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="screen chat-screen">
+                <div class="messages">
+                    <div class="message my-message"></div>
+                    <div class="update"></div>
+                    <div class="message other-message"></div>
+                </div>
+                <div class="typebox">
+                    <input type="text" id="message-input">
+                    <button id="send-message">send</button>
+                </div>
+                <div class="header row">
+                    <div class="logo">
+                        Exit Chatroom : 
+                    </div>
+                    <button id="exit-chat">Exit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="socket.io/socket.io.js"></script>
+<script>
+    (function () {
+        const app = document.querySelector(".app")
+        const socket = io()
+
+        let uname;
+        app.querySelector(".join-screen #join-user").addEventListener("click", function () {
+            let username = app.querySelector(".join-screen #username").value;
+            if (username.length == 0) {
+                return;
+            }
+            socket.emit("newuser", username)
+            uname = username;
+            app.querySelector(".join-screen").classList.remove("active")
+            app.querySelector(".chat-screen").classList.add("active")
+        })
+
+        app.querySelector(".chat-screen #send-message").addEventListener("click", function () {
+            let message = app.querySelector(".chat-screen #message-input").value;
+            if (message.length == 0) {
+                return;
+            }
+            rendermessage("my", {
+                username: uname,
+                text: message
+            })
+            socket.emit("chat", {
+                username: uname,
+                text: message
+            })
+            app.querySelector(".chat-screen #message-input").value = "";
+        })
+
+        app.querySelector(".chat-screen #exit-chat").addEventListener("click", function () {
+            socket.emit("exituser", uname)
+            window.location.href = window.location.href
+        })
+
+        socket.on("update", function (update) {
+            rendermessage("update", update)
+        })
+
+        socket.on("chat", function (message) {
+            rendermessage("other", message)
+        })
+
+        function rendermessage(type, message) {
+            let messagecontainer = app.querySelector(".chat-screen .messages")
+            if (type == "my") {
+                let el = document.createElement("div")
+                el.setAttribute("class", "message my-message")
+                el.innerHTML = `
+                    <div>
+                        <div class="text">${message.text}</div>
+                    </div>`
+                messagecontainer.appendChild(el)
+            }
+            else if (type == "other") {
+                let el = document.createElement("div")
+                el.setAttribute("class", "message other-message")
+                el.innerHTML = `
+                    <div>
+                        <div class="text">${message.text}</div>
+                    </div>`
+                messagecontainer.appendChild(el)
+            }
+            else if (type == "update") {
+                let el = document.createElement("div")
+                el.setAttribute("class", "update")
+                el.innerText = message;
+                messagecontainer.appendChild(el)
+            }
+
+            messagecontainer.scrollTop = messagecontainer.scrollHeight - messagecontainer.clientHeight
+        }
+    })();
+</script>
+
+</html>
